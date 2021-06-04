@@ -4,7 +4,7 @@ import io
 from pathlib import Path
 
 from PIL import Image
-from flask import Flask, send_from_directory, send_file, redirect
+from flask import Flask, send_from_directory, send_file, redirect, request
 from flask import render_template
 
 import copier
@@ -17,7 +17,7 @@ def b64encode(str):
     return base64.b64encode(str.encode('utf-8')).decode('utf-8').replace("/", ",")
 
 
-def base64decode(str):
+def b64decode(str):
     return base64.b64decode(str.replace(",", "/").encode('utf-8')).decode('utf-8')
 
 
@@ -25,23 +25,26 @@ def base64decode(str):
 def show_list():
     devices = show_devices()
     devices_to_show = []
+    available_for_backup = []
     for device in devices:
         if "mount" in device:
             link = b64encode(device["mount"])
             device_data_with_link = {"name": device["name"], "size": device["size"], "mount": device["mount"],
                                      "link": link}
+            available_for_backup.append(device["mount"])
         else:
             device_data_with_link = {"name": device["name"], "size": device["size"]}
         devices_to_show.append(device_data_with_link)
     return render_template('index.html', devices_count=len(devices_to_show), devices=devices_to_show,
                            last_executed_command=copier.last_executed_command,
                            last_executed_command_response=copier.last_executed_command_response,
-                           last_executed_command_errcode=copier.last_executed_command_errcode)
+                           last_executed_command_errcode=copier.last_executed_command_errcode,
+                           available_for_backup=available_for_backup)
 
 
 @app.route('/ls/<encpath>')
 def show_ls(encpath):
-    path = base64decode(encpath)
+    path = b64decode(encpath)
     folders, files = copier.ls(path)
     folders_to_show = []
     files_to_show = []
@@ -63,7 +66,7 @@ def show_ls(encpath):
 
 @app.route('/thumbnail/<encpath>')
 def thumbnail(encpath):
-    source_path = base64decode(encpath)
+    source_path = b64decode(encpath)
     filename = source_path.split("/")[-1]
 
     img = Image.open(source_path)
@@ -95,9 +98,38 @@ def do_unmount(dev):
     return redirect("/", code=302)
 
 
+@app.route('/stream/<from_enc>/<to_enc>/dobackup')
+def do_backup_and_send_logs(from_enc, to_enc):
+    from_mount_point = b64decode(from_enc)
+    to_mount_point = b64decode(to_enc)
+    if from_mount_point == to_mount_point:
+        return "error: from == to"
+    # now = datetime.now()
+    # destination = to_mount_point + "/dumps/" + now.strftime("%Y-%m-%d_%H-%M-%S") + "/" + from_mount_point.split("/")[-1]
+    destination = to_mount_point + "/dumps/"
+    copier.execute_blocking("mkdir -p " + destination)
+    print("from " + from_mount_point + " to " + to_mount_point + "; dest " + destination)
+    return app.response_class(
+        copier.execute_nonblocking("rsync -av  --progress " + from_mount_point + " " + destination),
+        mimetype='text/plain')
+
+
+@app.route('/stream/backup', methods=['POST'])
+def do_backup():
+    from_mount_point = request.form.get("from", None)
+    to_mount_point = request.form.get("to", None)
+    if (from_mount_point is None) or (to_mount_point is None):
+        return redirect("/", code=302)
+    if from_mount_point == to_mount_point:
+        return redirect("/", code=302)
+    from_mount_point_enc = b64encode(from_mount_point)
+    to_mount_point_enc = b64encode(to_mount_point)
+    return redirect("/stream/" + from_mount_point_enc + "/" + to_mount_point_enc + "/dobackup", code=302)
+
+
 @app.route('/download/<encpath>/<rawfilename>')
 def download(encpath, rawfilename):
-    path = base64decode(encpath)
+    path = b64decode(encpath)
     filename = path.split("/")[-1]
     if filename != rawfilename:
         return "error: provided mixed filenames " + filename + " and " + rawfilename

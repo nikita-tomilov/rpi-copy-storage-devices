@@ -25,6 +25,15 @@ def execute_blocking(command):
         last_executed_command_response = sys.exc_info()[0]
 
 
+def execute_nonblocking(command):
+    cmd = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    while True:
+        line = cmd.stdout.readline()
+        if not line:
+            break
+        yield line
+
+
 def show_devices():
     cmd = subprocess.Popen('lsblk | grep sd | grep part', shell=True, stdout=subprocess.PIPE)
     out, err = cmd.communicate()
@@ -34,7 +43,7 @@ def show_devices():
         # print(entries)
         if len(entries) > 3:
             dev = entries[0]
-            dev = dev.encode("ascii", "ignore").decode()
+            dev = dev.encode("ascii", "ignore").decode().replace('`', "").replace("-", "")
             size = entries[3]
             if len(entries) == 7:
                 mount_point = entries[6]

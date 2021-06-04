@@ -29,11 +29,29 @@ There are {{ devices_count }} devices <br>
     </tr>
     {% endfor %}
 </table>
-
+<br>
 {% if last_executed_command %}
 Last executed command: {{ last_executed_command }} <br>
 Response: {{ last_executed_command_errcode }} {{ last_executed_command_response }}
 {% endif %}
+<br>
 
+<form action="/stream/backup" method="post">
+    <p>
+        <select name="from">
+            <option disabled>Pick device FROM</option>
+            {% for a in available_for_backup %}
+            <option value="{{ a }}">{{ a }}</option>
+            {% endfor %}
+        </select>
+        <select name="to">
+            <option disabled>Pick device TO</option>
+            {% for a in available_for_backup %}
+            <option value="{{ a }}">{{ a }}</option>
+            {% endfor %}
+        </select>
+    </p>
+    <p><input type="submit" value="Perform backup"></p>
+</form>
 </body>
 </html>
