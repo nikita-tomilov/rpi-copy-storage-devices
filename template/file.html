@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf8">
+    <title>List of files in {{ path }}</title>
+</head>
+<meta name="viewport" content="width=device-width, maximum-scale=10">
+<body>
+Folder {{ path }} <br>
+There are {{ folders_count }} folders and {{ files_count }} files <br>
+<a href="{{ up_link }}">Go up</a> <br>
+<a href="/">Go home</a> <br><br>
+<table>
+    {% for folder in folders %}
+    <tr>
+        <td><img src="/static/folder.png" style="display:inline-block;max-width:128px;max-height:128px" alt=""/></td>
+        <td><a href="{{ folder.link }}">{{ folder.name }}</a></td>
+    </tr>
+    {% endfor %}
+    {% for file in files %}
+    <tr>
+        {% if file.thumbnail %}
+        <td>
+            <a href="{{ file.link }}">
+                <img src="{{ file.thumbnail }}" style="display:inline-block;max-width:128px;max-height:128px" alt=""/>
+            </a>
+        </td>
+        {% else %}
+        <td>
+            <img src="/static/file.png" style="display:inline-block;max-width:128px;max-height:128px" alt=""/>
+        </td>
+        {% endif %}
+        <td><a href="{{ file.link }}">{{ file.name }}</a></td>
+    </tr>
+    {% endfor %}
+</table>
+</body>
+</html>
