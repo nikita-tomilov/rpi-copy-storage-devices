@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf8">
-    <title>List of entries</title>
+    <title>Disks</title>
 </head>
 <meta name="viewport" content="width=device-width, maximum-scale=10">
 <body>
@@ -21,13 +21,19 @@ There are {{ devices_count }} devices <br>
         <td>{{ d.size }}</td>
         {% if d.mount %}
         <td><a href="/ls/{{ d.link }}">{{ d.mount }}</a></td>
-        <td>Unmount</td>
+        <td><a href="/unmount/{{ d.name }}">Unmount</a></td>
         {% else %}
         <td></td>
-        <td>Mount</td>
+        <td><a href="/mount/{{ d.name }}">Mount</a></td>
         {% endif %}
     </tr>
     {% endfor %}
 </table>
+
+{% if last_executed_command %}
+Last executed command: {{ last_executed_command }} <br>
+Response: {{ last_executed_command_errcode }} {{ last_executed_command_response }}
+{% endif %}
+
 </body>
 </html>

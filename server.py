@@ -1,12 +1,14 @@
+#!/usr/bin/env python3
 import base64
 import io
 from pathlib import Path
 
 from PIL import Image
-from flask import Flask, send_from_directory, send_file
+from flask import Flask, send_from_directory, send_file, redirect
 from flask import render_template
 
-from copier import show_devices, ls
+import copier
+from copier import show_devices
 
 app = Flask(__name__, template_folder="./template/")
 
@@ -31,13 +33,16 @@ def show_list():
         else:
             device_data_with_link = {"name": device["name"], "size": device["size"]}
         devices_to_show.append(device_data_with_link)
-    return render_template('index.html', devices_count=len(devices_to_show), devices=devices_to_show)
+    return render_template('index.html', devices_count=len(devices_to_show), devices=devices_to_show,
+                           last_executed_command=copier.last_executed_command,
+                           last_executed_command_response=copier.last_executed_command_response,
+                           last_executed_command_errcode=copier.last_executed_command_errcode)
 
 
 @app.route('/ls/<encpath>')
 def show_ls(encpath):
     path = base64decode(encpath)
-    folders, files = ls(path)
+    folders, files = copier.ls(path)
     folders_to_show = []
     files_to_show = []
     for folder in folders:
@@ -76,6 +81,18 @@ def thumbnail(encpath):
 def static_file(file):
     # vulnerability here, do not use this on servers
     return send_from_directory("./template/", file)
+
+
+@app.route('/mount/<dev>')
+def do_mount(dev):
+    copier.mount(dev)
+    return redirect("/", code=302)
+
+
+@app.route('/unmount/<dev>')
+def do_unmount(dev):
+    copier.unmount(dev)
+    return redirect("/", code=302)
 
 
 @app.route('/download/<encpath>/<rawfilename>')
